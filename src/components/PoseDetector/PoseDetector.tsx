@@ -20,6 +20,7 @@ const PoseDetector = () => {
     videoRef,
     canvasRef,
     handleStartDetection,
+    handleSwitchCamera,
     handleStopDetection,
   } = usePoseDetection()
 
@@ -106,6 +107,7 @@ const PoseDetector = () => {
         error={error}
         onStart={handleStartDetection}
         onStop={handleStopDetection}
+        onSwitchCamera={handleSwitchCamera}
       />
     </main>
   )

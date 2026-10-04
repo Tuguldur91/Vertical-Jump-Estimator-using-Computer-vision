@@ -256,6 +256,13 @@ export const usePoseDetection = () => {
 
     let stream: MediaStream | null = null
     try {
+      if (!window.isSecureContext) {
+        throw new Error('Camera access requires HTTPS. Open this page in Safari using an HTTPS URL.')
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera access is unavailable in this browser. Open the page directly in Safari and try again.')
+      }
+
       const landmarker = await initPoseLandmarker()
       if (session !== detectSessionRef.current) {
         if (!isMountedRef.current) {
@@ -410,8 +417,6 @@ export const usePoseDetection = () => {
     }
   }, [])
 
-  /**
-   */
 
   return {
     detectionState,
