@@ -42,7 +42,7 @@ const DetectorControl = ({
     )}
     <button
       type="button"
-      onClick={isDetecting ? onStop : onStart}
+      onClick={() => (isDetecting ? onStop() : onStart())}
       disabled={isLoading}
       className="min-w-40 rounded-full bg-white px-7 py-3 font-semibold text-black shadow-lg shadow-black/30 transition hover:bg-white/85 disabled:cursor-wait disabled:opacity-60"
     >

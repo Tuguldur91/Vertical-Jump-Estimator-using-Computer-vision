@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { usePoseDetection } from '../../hooks/usePoseDetection'
 import { isPhone } from '../../utils/poseHelper'
+import { FACING_MODE } from '../../constants/camera'
 import DetectorControl from './DetectorControl'
 import StatusIndicator from './StatusIndicator'
 
@@ -15,7 +16,7 @@ const PoseDetector = () => {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const isMobile = isPhone()
   const {
-    detectionState: { isDetecting, isLoading, landmarksDetected, error },
+    detectionState: { isDetecting, isLoading, landmarksDetected, error, facingMode },
     fps,
     videoRef,
     canvasRef,
@@ -23,6 +24,7 @@ const PoseDetector = () => {
     handleSwitchCamera,
     handleStopDetection,
   } = usePoseDetection()
+  const isFrontCamera = facingMode === FACING_MODE.USER
 
   useEffect(() => {
     const updateFullscreenState = () => {
@@ -84,7 +86,8 @@ const PoseDetector = () => {
       >
         <video
           ref={videoRef}
-          className={`h-full w-full ${isMobile ? 'object-cover' : 'object-contain'}`}
+          className="h-full w-full object-contain"
+          style={{ transform: isFrontCamera ? 'scaleX(-1)' : undefined }}
           autoPlay
           muted
           playsInline
@@ -92,7 +95,8 @@ const PoseDetector = () => {
         />
         <canvas
           ref={canvasRef}
-          className={`pointer-events-none absolute inset-0 h-full w-full ${isMobile ? 'object-cover' : 'object-contain'}`}
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+          style={{ transform: isFrontCamera ? 'scaleX(-1)' : undefined }}
           aria-label="Pose landmarks"
         />
         {!isDetecting && !isLoading && (

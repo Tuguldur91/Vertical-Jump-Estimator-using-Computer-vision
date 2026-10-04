@@ -54,8 +54,8 @@ export const usePoseDetection = () => {
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const animationFrameId = useRef<number | null>(null)
-  const timeoutId = useRef<ReturnType<typeof setTimeout> | null>(null)
   const detectSessionRef = useRef(0)
+  const lastDetectionAtRef = useRef(0)
   const fpsWindowRef = useRef({ frames: 0, startedAt: 0 })
   const isMountedRef = useRef(false)
 
@@ -140,11 +140,19 @@ export const usePoseDetection = () => {
   /**
    * Detect pose landmarks from the video stream and draw them on the canvas
    * @param {number} session - Current detection session ID
-   * uses requestAnimationFrame for smooth rendering and setTimeout for controlled detection intervals
+   * uses requestAnimationFrame with an interval gate to limit inference to the target frame rate
    * handles video readiness and errors gracefully, updating the detection state accordingly
    */
   const detectPose = useCallback(
     (session: number): void => {
+      const scheduleNextFrame = () => {
+        if (session === detectSessionRef.current) {
+          animationFrameId.current = requestAnimationFrame(() =>
+            detectPose(session)
+          )
+        }
+      }
+
       const landmarker = poseLandmarkerRef.current
       const video = videoRef.current
       const canvas = canvasRef.current
@@ -153,15 +161,19 @@ export const usePoseDetection = () => {
         return
 
       if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-        animationFrameId.current = requestAnimationFrame(() =>
-          detectPose(session)
-        )
+        scheduleNextFrame()
         return
       }
 
+      const now = performance.now()
+      if (now - lastDetectionAtRef.current < DETECTION_INTERVAL_MS_DEFAULT) {
+        scheduleNextFrame()
+        return
+      }
+      lastDetectionAtRef.current = now
+
       try {
-        const results = landmarker.detectForVideo(video, performance.now())
-        const now = performance.now()
+        const results = landmarker.detectForVideo(video, now)
         const fpsWindow = fpsWindowRef.current
         fpsWindow.frames += 1
         if (fpsWindow.startedAt === 0) fpsWindow.startedAt = now
@@ -196,28 +208,19 @@ export const usePoseDetection = () => {
         }))
       }
 
-      if (session === detectSessionRef.current) {
-        timeoutId.current = setTimeout(() => {
-          animationFrameId.current = requestAnimationFrame(() =>
-            detectPose(session)
-          )
-        }, DETECTION_INTERVAL_MS_DEFAULT)
-      }
+      scheduleNextFrame()
     },
     [drawPose]
   )
 
   const handleStopDetection = useCallback((): void => {
     detectSessionRef.current += 1
+    lastDetectionAtRef.current = 0
     fpsWindowRef.current = { frames: 0, startedAt: 0 }
     setFps(undefined)
     if (animationFrameId.current !== null) {
       cancelAnimationFrame(animationFrameId.current)
       animationFrameId.current = null
-    }
-    if (timeoutId.current !== null) {
-      clearTimeout(timeoutId.current)
-      timeoutId.current = null
     }
     stopAllTracks(streamRef.current)
     streamRef.current = null
@@ -248,7 +251,9 @@ export const usePoseDetection = () => {
    * throws an error if the camera access fails
    */
 
-  const handleStartDetection = useCallback(async (): Promise<void> => {
+  const handleStartDetection = useCallback(async (
+    facingMode: DetectionState['facingMode'] = detectionState.facingMode,
+  ): Promise<void> => {
     handleStopDetection()
     const session = ++detectSessionRef.current
     setDetectionState((state) => ({ ...state, isLoading: true, error: null }))
@@ -274,7 +279,7 @@ export const usePoseDetection = () => {
         return
       }
 
-      const constraints = await getMediaConstraints(detectionState.facingMode)
+      const constraints = await getMediaConstraints(facingMode)
       if (session !== detectSessionRef.current) return
       stream = await navigator.mediaDevices.getUserMedia(constraints)
       if (session !== detectSessionRef.current) {
@@ -373,15 +378,14 @@ export const usePoseDetection = () => {
    * handles switching the camera facing mode, restarting the detection process with the new camera
    */
   const handleSwitchCamera = useCallback(async (): Promise<void> => {
-    setDetectionState((state) => ({
-      ...state,
-      facingMode:
-        state.facingMode === FACING_MODE.USER
-          ? FACING_MODE.ENVIRONMENT
-          : FACING_MODE.USER,
-    }))
-    await handleStartDetection()
-  }, [handleStartDetection])
+    const nextFacingMode =
+      detectionState.facingMode === FACING_MODE.USER
+        ? FACING_MODE.ENVIRONMENT
+        : FACING_MODE.USER
+
+    setDetectionState((state) => ({ ...state, facingMode: nextFacingMode }))
+    await handleStartDetection(nextFacingMode)
+  }, [detectionState.facingMode, handleStartDetection])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -389,14 +393,11 @@ export const usePoseDetection = () => {
     return () => {
       isMountedRef.current = false
       detectSessionRef.current += 1
+      lastDetectionAtRef.current = 0
 
       if (animationFrameId.current !== null) {
         cancelAnimationFrame(animationFrameId.current)
         animationFrameId.current = null
-      }
-      if (timeoutId.current !== null) {
-        clearTimeout(timeoutId.current)
-        timeoutId.current = null
       }
 
       stopAllTracks(streamRef.current)
