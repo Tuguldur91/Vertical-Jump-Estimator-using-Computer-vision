@@ -5,6 +5,6 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/Vertical-Jump-Estimator-using-Computer-vision/',
+  base: '/',
   plugins: [react(), tailwindcss()],
 })
