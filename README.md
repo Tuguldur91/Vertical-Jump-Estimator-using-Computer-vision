@@ -52,13 +52,7 @@ Known open questions (confirm with advisor)
  Confirm actual approved thesis title/scope — template's English title reads "A system for evaluating fitness exercise performance using pose estimation," broader than what's been discussed.
  Clarify whether the goal is jump height (center-of-mass displacement) or reach/touch height (needs standing-reach calibration) — matters a lot for volleyball/basketball framing.
  Confirm whether program expects a trained/fine-tuned ML component (would justify including the ResNet arm) or whether pretrained-only is sufficient.
-16-week schedule (checkpoints: Явц 1 = wk6, Явц 2 = wk9, Урьдчилсан хамгаалалт = wk13, Шүүмж = wk15, Жинхэнэ хамгаалалт = wk16)
-Судалгаа (wk1–3) — related work, technology research
-Шинжилгээ (wk3–6) — requirements/architecture, method selection (pose estimation vs. classical)
-Хэрэгжүүлэлт I (wk6–9) — web app, camera input, pose estimation model integration; takeoff/landing detection algorithm
-Хэрэгжүүлэлт II (wk9–12) — classical physics-based method implementation; test recordings + data collection
-Үнэлгээ (wk11–13) — compare methods, compute metrics; error analysis
-Бичвэр, хамгаалалт (wk13–16) — write thesis, incorporate review feedback, prepare final defense
+se
 Stack summary
 Frontend: Vite + React
 Backend: Python — FastAPI, OpenCV, MediaPipe (pose_landmarker_lite for speed on modest hardware, e.g. MX450 2GB VRAM laptop — CPU inference is fine, no real-time constraint since processing happens after recording)
